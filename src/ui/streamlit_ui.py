@@ -6,6 +6,7 @@ import streamlit as st
 import plotly.express as px
 from datetime import datetime
 from ..models.meeting_models import MeetingAnalysis
+from .config_models import SidebarConfig
 
 class StreamlitUI:
     @staticmethod
@@ -42,11 +43,40 @@ class StreamlitUI:
         """, unsafe_allow_html=True)
     
     @staticmethod
-    def render_sidebar():
+    def render_sidebar() -> SidebarConfig:
         """Render sidebar configuration"""
         with st.sidebar:
             st.header("⚙️ Configuration")
             meeting_title = st.text_input("Meeting Title", "10 Academy Executive Meeting")
+            
+            # Analysis method toggle
+            st.subheader("🤖 Analysis Method")
+            analysis_method = st.radio(
+                "Choose Analysis Engine:",
+                ["🔍 Pattern-Based (Fast)", "🧠 Gemini-Powered (Advanced)"],
+                help="Pattern-based uses regex patterns. Gemini-powered uses Google AI."
+            )
+            
+            # Check for .env API key
+            from ..utils.config import Config
+            env_api_key = Config.get_gemini_api_key()
+            has_env_key = Config.has_valid_gemini_key()
+            
+            # API key handling
+            api_key = None
+            if "Gemini-Powered" in analysis_method:
+                if has_env_key:
+                    api_key = env_api_key
+                else:
+                    st.info("📝 No .env file found. Enter API key below:")
+                    api_key = st.text_input(
+                        "Google Gemini API Key:",
+                        type="password",
+                        help="Enter your Google Gemini API key for LLM analysis"
+                    )
+                    if not api_key:
+                        st.warning("⚠️ API key required for Gemini analysis")
+            
             analysis_depth = st.selectbox("Analysis Depth", ["Standard", "Deep", "Executive"])
             
             st.header("📊 Features")
@@ -59,7 +89,12 @@ class StreamlitUI:
             ✅ **Executive Reporting**
             """)
             
-            return meeting_title, analysis_depth
+            return SidebarConfig(
+                meeting_title=meeting_title,
+                analysis_depth=analysis_depth,
+                analysis_method=analysis_method,
+                api_key=api_key
+            )
     
     @staticmethod
     def render_file_upload():
@@ -69,18 +104,21 @@ class StreamlitUI:
     
     @staticmethod
     def render_metrics(analysis: MeetingAnalysis):
-        """Render metrics dashboard"""
-        col1, col2, col3, col4 = st.columns(4)
-        stats = analysis.summary_stats
-        
-        with col1:
-            st.metric("Decisions", stats['total_decisions'])
-        with col2:
-            st.metric("Action Items", stats['total_actions'])
-        with col3:
-            st.metric("High Impact", stats['high_impact_decisions'])
-        with col4:
-            st.metric("Confidence", f"{stats['avg_confidence']}")
+        """Render metrics dashboard with error handling"""
+        try:
+            col1, col2, col3, col4 = st.columns(4)
+            stats = analysis.summary_stats or {}
+            
+            with col1:
+                st.metric("Decisions", stats.get('total_decisions', 0))
+            with col2:
+                st.metric("Action Items", stats.get('total_actions', 0))
+            with col3:
+                st.metric("High Impact", stats.get('high_impact_decisions', 0))
+            with col4:
+                st.metric("Confidence", f"{stats.get('avg_confidence', 0)}")
+        except Exception as e:
+            st.error(f"Error displaying metrics: {str(e)}")
     
     @staticmethod
     def render_results(analysis: MeetingAnalysis):
@@ -89,36 +127,60 @@ class StreamlitUI:
         
         with col1:
             st.subheader("🎯 Strategic Decisions")
-            for i, decision in enumerate(analysis.decisions, 1):
-                st.markdown(f"""
-                **{i}. {decision.content}**  
-                *Impact: {decision.impact_level} | Confidence: {decision.confidence}*
-                """)
+            try:
+                for i, decision in enumerate(analysis.decisions, 1):
+                    content = getattr(decision, 'content', 'No content available')
+                    impact = getattr(decision, 'impact_level', 'Unknown')
+                    confidence = getattr(decision, 'confidence', 0)
+                    
+                    st.markdown(f"""
+                    **{i}. {content}**  
+                    *Impact: {impact} | Confidence: {confidence}*
+                    """)
+            except Exception as e:
+                st.warning(f"Could not display decisions: {str(e)}")
             
             st.subheader("✅ Action Items")
-            for i, action in enumerate(analysis.action_items, 1):
-                priority_color = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢"}
-                st.markdown(f"""
-                {priority_color.get(action.priority, '⚪')} **{action.assignee}**: {action.task}  
-                *Deadline: {action.deadline} | Priority: {action.priority.title()}*
-                """)
+            try:
+                for i, action in enumerate(analysis.action_items, 1):
+                    priority_color = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢"}
+                    priority = getattr(action, 'priority', 'unknown')
+                    assignee = getattr(action, 'assignee', 'Unassigned')
+                    task = getattr(action, 'task', 'No task specified')
+                    deadline = getattr(action, 'deadline', 'Not specified')
+                    confidence = getattr(action, 'confidence', 0)
+                    
+                    st.markdown(f"""
+                    {priority_color.get(priority, '⚪')} **{assignee}**: {task}  
+                    *Deadline: {deadline} | Priority: {priority.title() if priority else 'Unknown'}*
+                    """)
+            except Exception as e:
+                st.warning(f"Could not display action items: {str(e)}")
         
         with col2:
             st.subheader("📊 Meeting Analytics")
             
             # Sentiment chart
-            sentiment_data = analysis.sentiment
-            fig = px.pie(
-                values=list(sentiment_data.values()),
-                names=list(sentiment_data.keys()),
-                title="Sentiment Distribution"
-            )
-            st.plotly_chart(fig, use_container_width=True)
+            try:
+                sentiment_data = analysis.sentiment or {'positive': 33.3, 'negative': 33.3, 'neutral': 33.3}
+                if sentiment_data and any(sentiment_data.values()):
+                    fig = px.pie(
+                        values=list(sentiment_data.values()),
+                        names=list(sentiment_data.keys()),
+                        title="Sentiment Distribution"
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.info("No sentiment data available")
+            except Exception as e:
+                st.warning(f"Could not display sentiment chart: {str(e)}")
             
-            # Metadata
+            # Meeting metadata with safe access
             st.subheader("📋 Meeting Details")
-            st.write(f"**Next Meeting:** {analysis.metadata['next_meeting']}")
-            st.write(f"**Attendees:** {len(analysis.metadata['attendees'])} participants")
+            metadata = analysis.metadata or {}
+            st.write(f"**Next Meeting:** {metadata.get('next_meeting', 'Not specified')}")
+            participant_count = len(metadata.get('attendees', []))
+            st.write(f"**Attendees:** {participant_count} participants")
             
             if analysis.risks:
                 st.subheader("⚠️ Risk Indicators")
@@ -126,8 +188,8 @@ class StreamlitUI:
                     st.warning(risk)
     
     @staticmethod
-    def render_demo_transcript():
-        """Return demo transcript"""
+    def get_demo_transcript() -> str:
+        """Get demo transcript data"""
         return """
         Executive team meeting started at 9 AM. We decided to implement the new AI-driven customer analytics platform by Q2.
         Sarah will lead the technical implementation and must have the MVP ready by March 15th.

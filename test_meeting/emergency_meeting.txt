@@ -1,0 +1,25 @@
+URGENT: Database Performance Crisis Meeting
+Date: February 2, 2026
+Attendees: Robert (CTO), Julia (Database Admin), Sam (Lead Engineer)
+
+Robert: We have a critical situation with the production database latency. We need immediate solutions.
+
+Julia: We concluded that the main issue is a missing index on the transactions table. 
+
+Sam: We decided to restart the read-replica to alleviate the current load. This is a critical decision to prevent a total system crash.
+
+Robert: Julia, this is your top priority. Julia must patch the database indexing script immediately. 
+
+Sam: I'm worried about data integrity. Sam is responsible for running a full data consistency check by 4 PM today.
+
+Julia: We also determined that we need to increase our RDS instance size. This is urgent and will impact our monthly budget by $2,000.
+
+Robert: Approved. Robert will lead the communication with stakeholders and must send an incident report by end of day.
+
+Julia: Risk identified: if the index rebuild takes more than 2 hours, we might see a 10% timeout rate on the checkout page.
+
+Sam: We agreed that we will disable non-essential background jobs until the crisis is resolved.
+
+Robert: Let's stay in the war room. Our next meeting is scheduled for today at 6 PM to review the system stability.
+
+Meeting concluded.

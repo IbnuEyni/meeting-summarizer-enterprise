@@ -24,7 +24,7 @@ class Decision:
 class MeetingAnalysis:
     decisions: List[Decision]
     action_items: List[ActionItem]
-    metadata: Dict
-    sentiment: Dict
+    metadata: Dict[str, str]
+    sentiment: Dict[str, float]
     risks: List[str]
-    summary_stats: Dict
+    summary_stats: Dict[str, float]

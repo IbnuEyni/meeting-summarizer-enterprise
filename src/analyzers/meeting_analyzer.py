@@ -34,39 +34,75 @@ class EnterpriseAnalyzer:
         )
     
     def _extract_decisions(self, sentences: List[str]) -> List[Decision]:
-        """Extract decisions with confidence scoring"""
+        """Extract decisions with confidence scoring and error handling"""
         decisions = []
         
-        for sentence in sentences:
-            for pattern, confidence in self.patterns.DECISION_PATTERNS:
-                match = re.search(pattern, sentence.lower())
-                if match:
-                    content = match.groups()[-1].strip()
-                    if len(content) > 15:
-                        decisions.append(Decision(
-                            content=content.capitalize(),
-                            impact_level=self._assess_impact(sentence),
-                            stakeholders=self.text_processor.extract_names(sentence),
-                            confidence=confidence
-                        ))
+        try:
+            for sentence in sentences:
+                if not isinstance(sentence, str):
+                    continue
+                    
+                for pattern, confidence in self.patterns.DECISION_PATTERNS:
+                    try:
+                        match = re.search(pattern, sentence.lower())
+                        if match and match.groups():
+                            # Safe group access with validation
+                            groups = match.groups()
+                            if groups:
+                                content = groups[-1].strip() if groups[-1] else sentence.strip()
+                                
+                                if len(content) > 15:
+                                    decisions.append(Decision(
+                                        content=content.capitalize()[:500],  # Limit length
+                                        impact_level=self._assess_impact(sentence),
+                                        stakeholders=self.text_processor.extract_names(sentence),
+                                        confidence=confidence
+                                    ))
+                    except (IndexError, AttributeError, re.error):
+                        # Skip malformed patterns or regex errors
+                        continue
+                    except Exception as e:
+                        # Log and continue with other patterns
+                        print(f"Warning: Decision extraction error: {e}")
+                        continue
+        except Exception as e:
+            print(f"Error in decision extraction: {e}")
         
         return sorted(decisions, key=lambda x: x.confidence, reverse=True)[:5]
     
     def _extract_actions(self, sentences: List[str]) -> List[ActionItem]:
-        """Extract action items with priority detection"""
+        """Extract action items with priority detection and error handling"""
         actions = []
         
-        for sentence in sentences:
-            for pattern, confidence in self.patterns.ACTION_PATTERNS:
-                match = re.search(pattern, sentence.lower())
-                if match:
-                    actions.append(ActionItem(
-                        assignee=match.group(1).capitalize(),
-                        task=match.group(2).strip(),
-                        deadline=self.text_processor.extract_deadline(sentence),
-                        priority=self._assess_priority(sentence),
-                        confidence=confidence
-                    ))
+        try:
+            for sentence in sentences:
+                if not isinstance(sentence, str):
+                    continue
+                    
+                for pattern, confidence in self.patterns.ACTION_PATTERNS:
+                    try:
+                        match = re.search(pattern, sentence.lower())
+                        if match and match.lastindex and match.lastindex >= 2:
+                            # Safe group access with validation
+                            assignee = match.group(1).strip().capitalize()[:100] if match.group(1) else "Unknown"
+                            task = match.group(2).strip()[:500] if match.group(2) else "No task specified"
+                            
+                            actions.append(ActionItem(
+                                assignee=assignee,
+                                task=task,
+                                deadline=self.text_processor.extract_deadline(sentence),
+                                priority=self._assess_priority(sentence),
+                                confidence=confidence
+                            ))
+                    except (IndexError, AttributeError) as e:
+                        # Skip malformed patterns
+                        continue
+                    except Exception as e:
+                        # Log and continue with other patterns
+                        print(f"Warning: Action extraction error: {e}")
+                        continue
+        except Exception as e:
+            print(f"Error in action extraction: {e}")
         
         return sorted(actions, key=lambda x: (x.priority == 'critical', x.confidence), reverse=True)[:8]
     
