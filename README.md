@@ -1,10 +1,10 @@
 # 🚀 Enterprise Meeting Summarizer - TOP 1% Solution
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://streamlit.io)
-[![Python 3.10+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![alt text](https://img.shields.io/badge/Security-XSS--Protected-green.svg)
-![alt text](https://img.shields.io/badge/AI--Engine-Gemini--2.0--Flash-red.svg)
+![alt text](https://img.shields.io/badge/AI--Engine-Gemini--2.5--Flash-red.svg)
 
 > **🏆 10 Academy Challenge #2 Winner** - An enterprise-grade meeting analysis system that transforms transcripts into executive-level insights with AI-powered analytics.
 
